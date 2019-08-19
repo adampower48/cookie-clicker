@@ -30,6 +30,18 @@ class ProducerAdditiveUpgrade(Upgrade):
     def buy(self):
         super().buy()
         self.producer.add_pre += self.add_amount
+        
+class GameMultiplierUpgrade(Upgrade):
+    def __init__(self, name, cost, game, multiplier):
+        super().__init__(name, cost)
+        self.game = game
+        self.multiplier = multiplier
+        
+    def buy(self):
+        super().buy()
+        self.game.multiplier *= self.multiplier
+        
+        
 
 
 class CookieClickerGame:
@@ -54,13 +66,46 @@ class CookieClickerGame:
     ]
     
     upgrade_spec = [
-        dict(type=ProducerMultiplierUpgrade, name="clicker1", cost=100, producer="cursor", multiplier=2)
+        # Game
+        dict(type=GameMultiplierUpgrade, name="plain_cookies", cost=1e6, multiplier=1.01),
+        dict(type=GameMultiplierUpgrade, name="sugar_cookies", cost=5e6, multiplier=1.01),
+        dict(type=GameMultiplierUpgrade, name="oatmeal_raisin_cookies", cost=10e6, multiplier=1.01),
+        dict(type=GameMultiplierUpgrade, name="peanut_butter_cookies", cost=50e6, multiplier=1.01),
+        dict(type=GameMultiplierUpgrade, name="coconut_cookies", cost=100e6, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="almond_cookies", cost=100e6, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="hazelnut_cookies", cost=100e6, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="walnut_cookies", cost=100e6, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="white_chocolate_cookies", cost=500e6, multiplier=1.02),
+    
+        # Cursor
+        dict(type=ProducerMultiplierUpgrade, name="reinforced_index_finger", cost=100, producer="cursor", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="carpal_tunnel_prevention_cream", cost=500, producer="cursor", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="ambidextrous", cost=10000, producer="cursor", multiplier=2),
+        
+        # Grandma
+        dict(type=ProducerMultiplierUpgrade, name="forwards_from_grandma", cost=1000, producer="grandma", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="steel_plated_rolling_pins", cost=5000, producer="grandma", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="lubricated_dentures", cost=50000, producer="grandma", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="prune_juice", cost=5e6, producer="grandma", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="double_thick_glasses", cost=500e6, producer="grandma", multiplier=2),
+        
+        # Farm
+        dict(type=ProducerMultiplierUpgrade, name="cheap_hoes", cost=11e3, producer="farm", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="fertilizer", cost=55e3, producer="farm", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="cookie_trees", cost=550e3, producer="farm", multiplier=2),
+        
+        # Mine
+        dict(type=ProducerMultiplierUpgrade, name="sugar_gas", cost=120e3, producer="mine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="megadrill", cost=600e3, producer="mine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="ultradrill", cost=6e6, producer="mine", multiplier=2),
     ]
 
     def __init__(self):
+        self.total_cookies = 0
         self.cookies = 0
         self.turn = 0
         self.cpt = 0
+        self.multiplier = 1
         
         self.producers = self._setup_producers()
         self.upgrades = self._setup_upgrades()
@@ -73,13 +118,16 @@ class CookieClickerGame:
         for spec in self.upgrade_spec:
             if "producer" in spec and type(spec["producer"]) == str:
                 spec["producer"] = self.get_producer(spec["producer"])
+                
+            if spec["type"] in (GameMultiplierUpgrade,):
+                spec["game"] = self
             
             upgrades.append(spec["type"](**{k:v for k,v in spec.items() if k != "type"}))
             
         return upgrades
     
     def get_cpt(self):
-        return sum(p.production for p in self.producers)
+        return sum(p.production for p in self.producers) * self.multiplier
         
     def get_producer(self, name):
         return next(p for p in self.producers if p.name == name)
@@ -87,6 +135,7 @@ class CookieClickerGame:
     def advance(self):
         self.cpt = self.get_cpt()
         self.cookies += self.cpt
+        self.total_cookies += self.cpt
         self.turn += 1
         
     def buy_upgrade(self, idx):
@@ -144,7 +193,7 @@ class CookieClickerGame:
         
     def __str__(self):
         return "\n".join([
-            f"Turn: {self.turn}, Cookies: {self.cookies:.1f}, Producing: {self.cpt:.1f}",
+            f"Turn: {self.turn}, Cookies: {self.cookies:.1f}, Producing: {self.cpt:.1f}, Total: {self.total_cookies:.1f}",
             "Producers:",
             "\n".join(f"{p.name} - Owned: {p.n_owned}, Cost: {p.current_price:.0f}, Producing: {p.production:.1f}" for p in self.producers),
             "Upgrades:",
