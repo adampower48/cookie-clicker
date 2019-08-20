@@ -16,6 +16,16 @@ class Upgrade:
     def buy(self):
         self.owned = True
         
+    def __str__(self):
+        parts = [
+            f"{self.name:<35s}",
+            f"{self.__class__.__name__:<35s}",
+        ]
+    
+        return "".join(parts)
+            
+        
+        
 class UpdateUpgrade(Upgrade, metaclass=ABCMeta):
     @abstractmethod
     def update(self):
@@ -317,7 +327,6 @@ class CookieClickerGame:
             return False
             
     def get_cpc(self):
-        print("click", [f() for f in self.clicker_add_funcs], sum(f() for f in self.clicker_add_funcs))
         return 1 + sum(f() for f in self.clicker_add_funcs)
     
     def click(self):
@@ -327,9 +336,11 @@ class CookieClickerGame:
         return "\n".join([
             f"Turn: {self.turn}, Cookies: {self.cookies:.1f}, Producing: {self.cpt:.1f}, Total: {self.total_cookies:.1f}",
             "Producers:",
-            "\n".join(f"{p.name} - Owned: {p.n_owned}, Cost: {p.current_price:.0f}, Producing: {p.get_production():.1f}, Multis: {p.get_multis()}" for p in self.producers),
+            f"{'Name':<25s}{'Owned':<10s}{'Cost':<25s}{'Producing':<20s}{'Multis':<20s}",
+            "\n".join(map(str, self.producers)),
             "Upgrades:",
-            "\n".join(f"{u.name} - Type: {u.__class__.__name__}" for u in self.upgrades if u.owned),
+            f"{'Name':<35s}{'Type':<35s}{'Multi':<10s}",
+            "\n".join(str(u) for u in self.upgrades if u.owned),
         ])
         
     def get_available_actions(self):   
@@ -398,9 +409,6 @@ class Producer:
         self.add_post = 0
     
     def get_production(self):
-        if self.name == "cursor":
-            print(self.cpt, self.add_pre, self.n_owned, self.get_multi(), self.add_post,
-            (self.cpt + self.add_pre) * self.n_owned * self.get_multi() + self.add_post)
         return (self.cpt + self.add_pre) * self.n_owned * self.get_multi() + self.add_post
     
     def get_multi(self):
@@ -427,6 +435,8 @@ class Producer:
         self.n_owned -= 1
         self.current_price = self.get_price(self.n_owned)
  
+    def __str__(self):
+        return f"{self.name:<25s}{int(self.n_owned):<10d}{int(self.current_price):<25d}{self.get_production():<20.1f}" + f"{str(self.get_multis()):<10s}"
         
     
         
