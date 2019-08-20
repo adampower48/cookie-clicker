@@ -299,6 +299,12 @@ class CookieClickerGame:
         dict(type=GameMultiplierUpgrade, name="butter_cookies", cost=10e18, multiplier=1.03),
         dict(type=GameMultiplierUpgrade, name="cream_cookies", cost=50e18, multiplier=1.03),
         dict(type=GameMultiplierUpgrade, name="gingersnaps", cost=100e18, multiplier=1.04),
+        dict(type=GameMultiplierUpgrade, name="cinnamon_cookies", cost=500e18, multiplier=1.04),
+        dict(type=GameMultiplierUpgrade, name="vanity_cookies", cost=1e21, multiplier=1.04),
+        dict(type=GameMultiplierUpgrade, name="milk_chocolate_butter_biscuit", cost=1e21, multiplier=1.1),
+        dict(type=GameMultiplierUpgrade, name="cigars", cost=5e21, multiplier=1.04),
+        dict(type=GameMultiplierUpgrade, name="dark_chocolate_butter_biscuit", cost=1e24, multiplier=1.1),
+        dict(type=GameMultiplierUpgrade, name="white_chocolate_butter_biscuit", cost=1e27, multiplier=1.1),
     
         ## Clicker
         dict(type=ClickerAddCPSUpgrade, name="plastic_mouse", cost=50e3, add_amount=0.01),
@@ -334,6 +340,7 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="double_thick_glasses", cost=500e6, producer="grandma", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="aging_agents", cost=50e9, producer="grandma", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="xtreme_walkers", cost=50e12, producer="grandma", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="the_unbridling", cost=50e15, producer="grandma", multiplier=2),
         
         ## Multipliers + % per n grandmas
         dict(type=ProducerMultiPerNGrandmasUpgrade, name="farmer_grandmas", cost=55e3, producer="farm", grandma_multi=2, prod_add_multi=0.01, per_n=1),
@@ -346,6 +353,10 @@ class CookieClickerGame:
         dict(type=ProducerMultiPerNGrandmasUpgrade, name="transmuted_grandmas", cost=3.75e12, producer="alchemy_lab", grandma_multi=2, prod_add_multi=0.01, per_n=8),
         dict(type=ProducerMultiPerNGrandmasUpgrade, name="altered_grandmas", cost=50e12, producer="portal", grandma_multi=2, prod_add_multi=0.01, per_n=9),
         dict(type=ProducerMultiPerNGrandmasUpgrade, name="grandmas_grandmas", cost=700e15, producer="time_machine", grandma_multi=2, prod_add_multi=0.01, per_n=10),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="antigrandmas", cost=8.5e18, producer="antimatter_condenser", grandma_multi=2, prod_add_multi=0.01, per_n=11),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="rainbow_grandmas", cost=105e18, producer="prism", grandma_multi=2, prod_add_multi=0.01, per_n=12),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="lucky_grandmas", cost=1.3e21, producer="chancemaker", grandma_multi=2, prod_add_multi=0.01, per_n=13),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="metagrandmas", cost=15.5e21, producer="fractal_engine", grandma_multi=2, prod_add_multi=0.01, per_n=14),
         
         # Farm
         dict(type=ProducerMultiplierUpgrade, name="cheap_hoes", cost=11e3, producer="farm", multiplier=2),
@@ -353,6 +364,8 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="cookie_trees", cost=550e3, producer="farm", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="genetically_modified_cookies", cost=55e6, producer="farm", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="gingerbread_scarecrows", cost=5.5e9, producer="farm", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="pulsar_sprinklers", cost=550e9, producer="farm", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="fudge_fungus", cost=550e12, producer="farm", multiplier=2),
         
         # Mine
         dict(type=ProducerMultiplierUpgrade, name="sugar_gas", cost=120e3, producer="mine", multiplier=2),
@@ -360,6 +373,9 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="ultradrill", cost=6e6, producer="mine", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="ultimadrill", cost=600e6, producer="mine", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="h_bomb_mining", cost=60e9, producer="mine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="coreforge", cost=6e12, producer="mine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="planetsplitters", cost=6e15, producer="mine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="canola_oil_wells", cost=6e18, producer="mine", multiplier=2),
         
         # Factory
         dict(type=ProducerMultiplierUpgrade, name="sturdier_conveyor_belts", cost=1.3e6, producer="factory", multiplier=2),
@@ -367,6 +383,9 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="sweatshop", cost=65e6, producer="factory", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="radium_reactors", cost=6.5e9, producer="factory", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="recombobulators", cost=650e9, producer="factory", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="deep_bake_process", cost=65e12, producer="factory", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="cyborg_workforce", cost=65e15, producer="factory", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="78_hour_days", cost=65e18, producer="factory", multiplier=2),
         
         # Bank
         dict(type=ProducerMultiplierUpgrade, name="taller_tellers", cost=14e6, producer="bank", multiplier=2),
@@ -374,6 +393,8 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="acid_prood_vaults", cost=700e6, producer="bank", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="chocolate_coins", cost=70e9, producer="bank", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="exponential_interest_rates", cost=7e12, producer="bank", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="financial_zen", cost=700e12, producer="bank", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="way_of_the_wallet", cost=700e15, producer="bank", multiplier=2),
         
         # Temple
         dict(type=ProducerMultiplierUpgrade, name="golden_idols", cost=200e6, producer="temple", multiplier=2),
@@ -381,6 +402,8 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="delicious_blessing", cost=10e9, producer="temple", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="sun_festival", cost=1e12, producer="temple", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="enlarged_pantheon", cost=100e12, producer="temple", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="great_baker_in_the_sky", cost=10e15, producer="temple", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="creation_myth", cost=10e18, producer="temple", multiplier=2),
         
         # Wizard Tower
         dict(type=ProducerMultiplierUpgrade, name="pointier_hats", cost=3.3e9, producer="wizard_tower", multiplier=2),
@@ -388,6 +411,8 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="ancient_grimoires", cost=165e9, producer="wizard_tower", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="kitchen_curses", cost=16.5e12, producer="wizard_tower", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="school_of_sorcery", cost=1.65e15, producer="wizard_tower", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="dark_formulas", cost=165e15, producer="wizard_tower", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="cookiemancy", cost=165e18, producer="wizard_tower", multiplier=2),
         
         # Shipment
         dict(type=ProducerMultiplierUpgrade, name="vanilla_nebulae", cost=51e9, producer="shipment", multiplier=2),
@@ -395,6 +420,8 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="frequent_flyer", cost=2.55e12, producer="shipment", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="warp_drive", cost=255e12, producer="shipment", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="chocolate_monoliths", cost=25.5e15, producer="shipment", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="generation_ship", cost=2.55e18, producer="shipment", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="dyson_sphere", cost=2.55e21, producer="shipment", multiplier=2),
         
         # Alchemy Lab
         dict(type=ProducerMultiplierUpgrade, name="antimony", cost=750e9, producer="alchemy_lab", multiplier=2),
@@ -402,6 +429,8 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="true_chocolate", cost=37.5e12, producer="alchemy_lab", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="ambrosia", cost=3.75e15, producer="alchemy_lab", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="aqua_crustulae", cost=375e15, producer="alchemy_lab", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="origin_crucible", cost=37.5e18, producer="alchemy_lab", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="theory_of_atomic_fluidity", cost=37.5e21, producer="alchemy_lab", multiplier=2),
         
         # Portal
         dict(type=ProducerMultiplierUpgrade, name="ancient_tablet", cost=10e12, producer="portal", multiplier=2),
@@ -409,6 +438,8 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="soul_bond", cost=500e12, producer="portal", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="sanity_dance", cost=50e15, producer="portal", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="brane_transplant", cost=5e18, producer="portal", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="deity_sized_portals", cost=500e18, producer="portal", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="end_of_times_backup_plan", cost=500e21, producer="portal", multiplier=2),
         
         # Time Machine
         dict(type=ProducerMultiplierUpgrade, name="flux_capacitors", cost=140e12, producer="time_machine", multiplier=2),
@@ -416,18 +447,44 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="quantum_conundrum", cost=7e15, producer="time_machine", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="causality_enforcer", cost=700e15, producer="time_machine", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="yestermorrow_comparators", cost=70e18, producer="time_machine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="far_future_enactment", cost=7e21, producer="time_machine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="great_loop_hypothesis", cost=7e24, producer="time_machine", multiplier=2),
         
         # Antimatter Condenser
         dict(type=ProducerMultiplierUpgrade, name="sugar_bosons", cost=1.7e15, producer="antimatter_condenser", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="string_theory", cost=8.5e15, producer="antimatter_condenser", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="large_macaron_collider", cost=85e15, producer="antimatter_condenser", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="big_bang_bake", cost=8.5e18, producer="antimatter_condenser", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="reverse_cyclotrons", cost=850e18, producer="antimatter_condenser", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="nanocosmics", cost=85e21, producer="antimatter_condenser", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="the_pulse", cost=85e24, producer="antimatter_condenser", multiplier=2),
         
         # Prism
         dict(type=ProducerMultiplierUpgrade, name="gem_polish", cost=21e15, producer="prism", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="9th_color", cost=105e15, producer="prism", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="chocolate_light", cost=1.05e18, producer="prism", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="grainbow", cost=105e18, producer="prism", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="pure_cosmic_light", cost=10.5e21, producer="prism", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="glow_in_the_dark", cost=1.05e24, producer="prism", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="lux_sanctorum", cost=1.05e27, producer="prism", multiplier=2),
         
         # Chancemaker
         dict(type=ProducerMultiplierUpgrade, name="your_lucky_cookie", cost=260e15, producer="chancemaker", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="all_bets_are_off_magic_coin", cost=1.3e18, producer="chancemaker", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="winning_lottery_ticket", cost=13e18, producer="chancemaker", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="four_leaf_clover_field", cost=1.3e21, producer="chancemaker", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="a_recipe_book_about_books", cost=130e21, producer="chancemaker", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="leprechaun_village", cost=13e24, producer="chancemaker", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="improbability_drive", cost=13e27, producer="chancemaker", multiplier=2),
         
         # Fractal Engine
         dict(type=ProducerMultiplierUpgrade, name="metabakeries", cost=3.1e18, producer="fractal_engine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="mandelbrown_sugar", cost=15.5e18, producer="fractal_engine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="fractoids", cost=155e18, producer="fractal_engine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="nested_universe_theory", cost=15.5e21, producer="fractal_engine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="mengar_sponge_cake", cost=1.55e24, producer="fractal_engine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="one_particularly_good_humored_cow", cost=155e24, producer="fractal_engine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="chocolate_ouroboros", cost=155e27, producer="fractal_engine", multiplier=2),
     ]
 
     def __init__(self):
