@@ -4,7 +4,7 @@ import random
 game = CookieClickerGame()
 game.cookies = 50
 
-for i in range(1000):
+for i in range(5000):
     print("---")
     print(game)
     print("---")

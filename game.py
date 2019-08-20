@@ -1,5 +1,10 @@
 import random
 from abc import abstractmethod, ABCMeta
+import operator as op
+from functools import reduce
+
+def prod(values):
+    return reduce(op.mul, values, 1)
 
 class Upgrade:
     def __init__(self, name, cost):
@@ -24,7 +29,10 @@ class ProducerMultiplierUpgrade(Upgrade):
         
     def buy(self):
         super().buy()
-        self.producer.multiplier *= self.multiplier
+        self.producer.add_multi_func(self.get_multiplier)
+        
+    def get_multiplier(self):
+        return self.multiplier
         
         
 class ProducerAdditiveUpgrade(Upgrade):
@@ -35,7 +43,7 @@ class ProducerAdditiveUpgrade(Upgrade):
         
     def buy(self):
         super().buy()
-        self.producer.add_pre += self.add_amount
+        self.producer.change_stats(add_pre=self.add_amount)
         
 class GameMultiplierUpgrade(Upgrade):
     def __init__(self, name, cost, game, multiplier):
@@ -45,26 +53,60 @@ class GameMultiplierUpgrade(Upgrade):
         
     def buy(self):
         super().buy()
-        self.game.multiplier *= self.multiplier
+        self.game.multiplier_funcs.append(self.get_multiplier)
+        
+    def get_multiplier(self):
+        return self.multiplier
         
 class CursorAddPerOtherUpgrade(UpdateUpgrade):
-    
-
-    def __init__(self, name, cost, producers, add_amount):
+    def __init__(self, name, cost, producers, game, add_amount):
         super().__init__(name, cost)
         self.cursor_producer = next(p for p in producers if p.name == "cursor")
         self.other_producers = [p for p in producers if p.name != "cursor"]
         self.add_amount = add_amount
+        self.game = game
         
         self.old_n_owned = 0
         
+    def buy(self):
+        super().buy()
+        self.game.clicker_add_funcs.append(self.get_add)
+        
+    def get_add(self):
+        new_n_owned = sum(p.n_owned for p in self.other_producers)
+        return self.add_amount * new_n_owned
+        
     def update(self):
+        if not self.owned:
+            return
+    
         new_n_owned = sum(p.n_owned for p in self.other_producers)
         diff = new_n_owned - self.old_n_owned
         
         self.cursor_producer.change_stats(add_pre=diff * self.add_amount)
         self.old_n_owned = new_n_owned
         
+class ProducerMultiPerNGrandmasUpgrade(Upgrade):
+    def __init__(self, name, cost, producer, grandma_producer, grandma_multi, prod_add_multi, per_n):
+        super().__init__(name, cost)
+        self.add_producer = producer
+        self.add_multi = prod_add_multi
+        self.grandma_producer = grandma_producer
+        self.grandma_multi = grandma_multi
+        self.per_n = per_n
+        
+        self.old_n_owned = 0
+    
+    def buy(self):
+        super().buy()
+        self.grandma_producer.multiplier_funcs.append(self.get_multiplier_grandma)
+        self.add_producer.multiplier_funcs.append(self.get_multiplier_producer)
+        
+    def get_multiplier_producer(self):
+        return 1 + self.add_multi * self.grandma_producer.n_owned / self.per_n
+        
+    def get_multiplier_grandma(self):
+        return self.grandma_multi
         
 
 
@@ -108,15 +150,26 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="ambidextrous", cost=10000, producer="cursor", multiplier=2),
         
         ## Additive Per Other
-        dict(type=CursorAddPerOtherUpgrade, name="thousand_fungers", cost=10, add_amount=0.1),
+        dict(type=CursorAddPerOtherUpgrade, name="thousand_fingers", cost=100e3, add_amount=0.1),
+        dict(type=CursorAddPerOtherUpgrade, name="million_fingers", cost=10e6, add_amount=0.5),
+        dict(type=CursorAddPerOtherUpgrade, name="billion_fingers", cost=100e6, add_amount=5),
+        dict(type=CursorAddPerOtherUpgrade, name="trillion_fingers", cost=1e9, add_amount=50),
+        dict(type=CursorAddPerOtherUpgrade, name="quadrillion_fingers", cost=10e9, add_amount=500),
         
         
         # Grandma
+        ## Multipliers
         dict(type=ProducerMultiplierUpgrade, name="forwards_from_grandma", cost=1000, producer="grandma", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="steel_plated_rolling_pins", cost=5000, producer="grandma", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="lubricated_dentures", cost=50000, producer="grandma", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="prune_juice", cost=5e6, producer="grandma", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="double_thick_glasses", cost=500e6, producer="grandma", multiplier=2),
+        
+        ## Multipliers + % per n grandmas
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="farmer_grandmas", cost=55e3, producer="farm", grandma_multi=2, prod_add_multi=0.01, per_n=1),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="miner_grandmas", cost=600e3, producer="mine", grandma_multi=2, prod_add_multi=0.01, per_n=2),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="worker_grandmas", cost=6.5e6, producer="factory", grandma_multi=2, prod_add_multi=0.01, per_n=3),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="banker_grandmas", cost=70e6, producer="bank", grandma_multi=2, prod_add_multi=0.01, per_n=4),
         
         # Farm
         dict(type=ProducerMultiplierUpgrade, name="cheap_hoes", cost=11e3, producer="farm", multiplier=2),
@@ -127,6 +180,34 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="sugar_gas", cost=120e3, producer="mine", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="megadrill", cost=600e3, producer="mine", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="ultradrill", cost=6e6, producer="mine", multiplier=2),
+        
+        # Factory
+        dict(type=ProducerMultiplierUpgrade, name="sturdier_conveyor_belts", cost=1.3e6, producer="factory", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="child_labor", cost=6.5e6, producer="factory", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="sweatshop", cost=65e6, producer="factory", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="radium_reactors", cost=6.5e9, producer="factory", multiplier=2),
+        
+        # Bank
+        
+        # Temple
+        
+        # Wizard Tower
+        
+        # Shipment
+        
+        # Alchemy Lab
+        
+        # Portal
+        
+        # Time Machine
+        
+        # Antimatter Condenser
+        
+        # Prism
+        
+        # Chancemaker
+        
+        # Fractal Engine
     ]
 
     def __init__(self):
@@ -134,7 +215,8 @@ class CookieClickerGame:
         self.cookies = 0
         self.turn = 0
         self.cpt = 0
-        self.multiplier = 1
+        self.multiplier_funcs = []
+        self.clicker_add_funcs = []
         
         self.producers = self._setup_producers()
         self.upgrades = self._setup_upgrades()
@@ -152,8 +234,11 @@ class CookieClickerGame:
             if spec["type"] in (CursorAddPerOtherUpgrade,):
                 spec["producers"] = self.producers
                 
-            if spec["type"] in (GameMultiplierUpgrade,):
+            if spec["type"] in (GameMultiplierUpgrade, CursorAddPerOtherUpgrade):
                 spec["game"] = self
+                
+            if spec["type"] in (ProducerMultiPerNGrandmasUpgrade,):
+                spec["grandma_producer"] = self.get_producer("grandma")
             
             upgrades.append(spec["type"](**{k:v for k,v in spec.items() if k != "type"}))
             
@@ -166,10 +251,13 @@ class CookieClickerGame:
     
     
     def get_cpt(self):
-        return sum(p.production for p in self.producers) * self.multiplier
+        return sum(p.get_production() for p in self.producers) * self.get_multi()
         
     def get_producer(self, name):
         return next(p for p in self.producers if p.name == name)
+        
+    def get_multi(self):
+        return prod(f() for f in self.multiplier_funcs)
     
     def advance(self):
         self._update_upgrades()
@@ -228,15 +316,18 @@ class CookieClickerGame:
             print(f"Cant sell: {prod.name}. Owned: {prod.n_owned}")
             return False
             
-            
+    def get_cpc(self):
+        print("click", [f() for f in self.clicker_add_funcs], sum(f() for f in self.clicker_add_funcs))
+        return 1 + sum(f() for f in self.clicker_add_funcs)
+    
     def click(self):
-        self.cookies += 1
+        self.cookies += self.get_cpc()
         
     def __str__(self):
         return "\n".join([
             f"Turn: {self.turn}, Cookies: {self.cookies:.1f}, Producing: {self.cpt:.1f}, Total: {self.total_cookies:.1f}",
             "Producers:",
-            "\n".join(f"{p.name} - Owned: {p.n_owned}, Cost: {p.current_price:.0f}, Producing: {p.production:.1f}" for p in self.producers),
+            "\n".join(f"{p.name} - Owned: {p.n_owned}, Cost: {p.current_price:.0f}, Producing: {p.get_production():.1f}, Multis: {p.get_multis()}" for p in self.producers),
             "Upgrades:",
             "\n".join(f"{u.name} - Type: {u.__class__.__name__}" for u in self.upgrades if u.owned),
         ])
@@ -302,20 +393,28 @@ class Producer:
         
         self.n_owned = 0
         self.current_price = base_price
-        self.production = 0
-        self.multiplier = 1
+        self.multiplier_funcs = []
         self.add_pre = 0
         self.add_post = 0
     
     def get_production(self):
-        return (self.cpt + self.add_pre) * self.n_owned * self.multiplier + self.add_post
+        if self.name == "cursor":
+            print(self.cpt, self.add_pre, self.n_owned, self.get_multi(), self.add_post,
+            (self.cpt + self.add_pre) * self.n_owned * self.get_multi() + self.add_post)
+        return (self.cpt + self.add_pre) * self.n_owned * self.get_multi() + self.add_post
+    
+    def get_multi(self):
+        return prod(self.get_multis())
+    
+    def get_multis(self):
+        return [f() for f in self.multiplier_funcs]
         
-    def change_stats(self, multiplier=1, add_pre=0, add_post=0):
-        self.multiplier *= multiplier
+    def add_multi_func(self, func):
+        self.multiplier_funcs.append(func)
+    
+    def change_stats(self, add_pre=0, add_post=0):
         self.add_pre += add_pre
         self.add_post += add_post
-        
-        self.production = self.get_production()
     
     def get_price(self, n):
         return int(self.base_price * self.price_scaling ** n)
@@ -323,12 +422,10 @@ class Producer:
     def buy(self):
         self.n_owned += 1
         self.current_price = self.get_price(self.n_owned)
-        self.production = self.get_production()
         
     def sell(self):
         self.n_owned -= 1
         self.current_price = self.get_price(self.n_owned)
-        self.production = self.get_production()
  
         
     
