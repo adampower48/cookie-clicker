@@ -2,9 +2,9 @@ from game import CookieClickerGame
 import random
 
 game = CookieClickerGame()
-game.cookies = 50
+game.cookies = 0
 
-for i in range(5000):
+for i in range(50):
     print("---")
     print(game)
     print("---")

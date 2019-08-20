@@ -6,6 +6,14 @@ from functools import reduce
 def prod(values):
     return reduce(op.mul, values, 1)
 
+def format_large_num(x):
+    if x > 1e6:
+        return f"{x:.2e}"
+    else:
+        return str(x)
+    
+
+
 class Upgrade:
     def __init__(self, name, cost):
         self.name = name
@@ -24,8 +32,6 @@ class Upgrade:
     
         return "".join(parts)
             
-        
-        
 class UpdateUpgrade(Upgrade, metaclass=ABCMeta):
     @abstractmethod
     def update(self):
@@ -43,8 +49,15 @@ class ProducerMultiplierUpgrade(Upgrade):
         
     def get_multiplier(self):
         return self.multiplier
+    
+    def __str__(self):
+        parts = [
+            super().__str__(),
+            f"{self.get_multiplier():<10d}",
+        ]
         
-        
+        return "".join(parts)
+    
 class ProducerAdditiveUpgrade(Upgrade):
     def __init__(self, name, cost, producer, add_amount):
         super().__init__(name, cost)
@@ -67,6 +80,14 @@ class GameMultiplierUpgrade(Upgrade):
         
     def get_multiplier(self):
         return self.multiplier
+        
+    def __str__(self):
+        parts = [
+            super().__str__(),
+            f"{self.get_multiplier():<10d}",
+        ]
+        
+        return "".join(parts)
         
 class CursorAddPerOtherUpgrade(UpdateUpgrade):
     def __init__(self, name, cost, producers, game, add_amount):
@@ -96,6 +117,14 @@ class CursorAddPerOtherUpgrade(UpdateUpgrade):
         self.cursor_producer.change_stats(add_pre=diff * self.add_amount)
         self.old_n_owned = new_n_owned
         
+    def __str__(self):
+        parts = [
+            super().__str__(),
+            f"+{self.get_add():.1f}"
+        ]
+        
+        return "".join(parts)
+        
 class ProducerMultiPerNGrandmasUpgrade(Upgrade):
     def __init__(self, name, cost, producer, grandma_producer, grandma_multi, prod_add_multi, per_n):
         super().__init__(name, cost)
@@ -118,6 +147,17 @@ class ProducerMultiPerNGrandmasUpgrade(Upgrade):
     def get_multiplier_grandma(self):
         return self.grandma_multi
         
+        
+    def __str__(self):
+        parts = [
+            super().__str__(),
+            ", ".join([
+                f"{int(self.get_multiplier_grandma()):d}",
+                f"{self.get_multiplier_producer():.2f}",
+            ])
+        ]
+        
+        return "".join(parts)
 
 
 class CookieClickerGame:
@@ -336,7 +376,7 @@ class CookieClickerGame:
         return "\n".join([
             f"Turn: {self.turn}, Cookies: {self.cookies:.1f}, Producing: {self.cpt:.1f}, Total: {self.total_cookies:.1f}",
             "Producers:",
-            f"{'Name':<25s}{'Owned':<10s}{'Cost':<25s}{'Producing':<20s}{'Multis':<20s}",
+            f"{'Name':<25s}{'Owned':<10s}{'Cost':<15s}{'Producing':<20s}{'Multis':<20s}",
             "\n".join(map(str, self.producers)),
             "Upgrades:",
             f"{'Name':<35s}{'Type':<35s}{'Multi':<10s}",
@@ -436,7 +476,7 @@ class Producer:
         self.current_price = self.get_price(self.n_owned)
  
     def __str__(self):
-        return f"{self.name:<25s}{int(self.n_owned):<10d}{int(self.current_price):<25d}{self.get_production():<20.1f}" + f"{str(self.get_multis()):<10s}"
+        return f"{self.name:<25s}{int(self.n_owned):<10d}{format_large_num(self.current_price):<15s}{self.get_production():<20.1f}" + f"{str(self.get_multis()):<10s}"
         
     
         
