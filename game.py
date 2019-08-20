@@ -7,11 +7,29 @@ def prod(values):
     return reduce(op.mul, values, 1)
 
 def format_large_num(x):
+    """
+    1234567 -> 1.23e6
+    1 -> 1
+    1.12345 -> 1.12
+    1.6001 -> 1.6
+    2.5012345 -> 2.5
+    
+    """
+
     if x > 1e6:
         return f"{x:.2e}"
-    else:
-        return str(x)
+        
+    r = abs(round(x) - x)
     
+    
+    if r < 0.01: # eg 1.00001
+        return str(int(round(x)))
+    
+    elif r % 0.1 < 0.01: # eg 3.60001
+        return f"{round(x, 1):.1f}"
+        
+    
+    return f"{round(x, 2):.2f}"
 
 
 class Upgrade:
@@ -26,7 +44,7 @@ class Upgrade:
         
     def __str__(self):
         parts = [
-            f"{self.name:<35s}",
+            f"{self.name:<40s}",
             f"{self.__class__.__name__:<35s}",
         ]
     
@@ -57,7 +75,52 @@ class ProducerMultiplierUpgrade(Upgrade):
         ]
         
         return "".join(parts)
+        
+class ProducerManyMultiplierUpgrade(Upgrade):
+    def __init__(self, name, cost, producers, multiplier):
+        super().__init__(name, cost)
+        self.producers = producers
+        self.multiplier = multiplier
     
+    def buy(self):
+        super().buy()
+        for p in self.producers:
+            p.add_multi_func(self.get_multiplier)
+        
+    def get_multiplier(self):
+        return self.multiplier
+    
+    def __str__(self):
+        parts = [
+            super().__str__(),
+            f"{self.get_multiplier():<10d}",
+        ]
+        
+        return "".join(parts)
+
+class ClickerCursorMultiplierUpgrade(Upgrade):
+    def __init__(self, name, cost, cursor_producer, game, multiplier):
+        super().__init__(name, cost)
+        self.cursor_producer = cursor_producer
+        self.multiplier = multiplier
+        self.game = game
+        
+    def buy(self):
+        super().buy()
+        self.cursor_producer.add_multi_func(self.get_multiplier)
+        self.game.clicker_multiplier_funcs.append(self.get_multiplier)
+        
+    def get_multiplier(self):
+        return self.multiplier
+    
+    def __str__(self):
+        parts = [
+            super().__str__(),
+            f"{self.get_multiplier():<10d}",
+        ]
+        
+        return "".join(parts)
+
 class ProducerAdditiveUpgrade(Upgrade):
     def __init__(self, name, cost, producer, add_amount):
         super().__init__(name, cost)
@@ -66,7 +129,10 @@ class ProducerAdditiveUpgrade(Upgrade):
         
     def buy(self):
         super().buy()
-        self.producer.change_stats(add_pre=self.add_amount)
+        self.producer.add_add_pre_func(self.get_add)
+        
+    def get_add(self):
+        return self.add_amount
         
 class GameMultiplierUpgrade(Upgrade):
     def __init__(self, name, cost, game, multiplier):
@@ -84,12 +150,12 @@ class GameMultiplierUpgrade(Upgrade):
     def __str__(self):
         parts = [
             super().__str__(),
-            f"{self.get_multiplier():<10d}",
+            f"{self.get_multiplier():<10.2f}",
         ]
         
         return "".join(parts)
         
-class CursorAddPerOtherUpgrade(UpdateUpgrade):
+class CursorAddPerOtherUpgrade(Upgrade):
     def __init__(self, name, cost, producers, game, add_amount):
         super().__init__(name, cost)
         self.cursor_producer = next(p for p in producers if p.name == "cursor")
@@ -102,20 +168,11 @@ class CursorAddPerOtherUpgrade(UpdateUpgrade):
     def buy(self):
         super().buy()
         self.game.clicker_add_funcs.append(self.get_add)
+        self.cursor_producer.add_add_pre_func(self.get_add)
         
     def get_add(self):
         new_n_owned = sum(p.n_owned for p in self.other_producers)
         return self.add_amount * new_n_owned
-        
-    def update(self):
-        if not self.owned:
-            return
-    
-        new_n_owned = sum(p.n_owned for p in self.other_producers)
-        diff = new_n_owned - self.old_n_owned
-        
-        self.cursor_producer.change_stats(add_pre=diff * self.add_amount)
-        self.old_n_owned = new_n_owned
         
     def __str__(self):
         parts = [
@@ -124,6 +181,28 @@ class CursorAddPerOtherUpgrade(UpdateUpgrade):
         ]
         
         return "".join(parts)
+
+class ClickerAddCPSUpgrade(Upgrade):
+    def __init__(self, name, cost, game, add_amount):
+        super().__init__(name, cost)
+        self.game = game
+        self.add_amount = add_amount
+        
+    def buy(self):
+        super().buy()
+        self.game.clicker_add_funcs.append(self.get_add)
+        
+    def get_add(self):
+        return self.game.get_cpt() * self.add_amount
+        
+    def __str__(self):
+        parts = [
+            super().__str__(),
+            f"+{self.get_add():.1f}"
+        ]
+        
+        return "".join(parts)
+        
         
 class ProducerMultiPerNGrandmasUpgrade(Upgrade):
     def __init__(self, name, cost, producer, grandma_producer, grandma_multi, prod_add_multi, per_n):
@@ -183,6 +262,7 @@ class CookieClickerGame:
     
     upgrade_spec = [
         # Game
+        ## Multipliers
         dict(type=GameMultiplierUpgrade, name="plain_cookies", cost=1e6, multiplier=1.01),
         dict(type=GameMultiplierUpgrade, name="sugar_cookies", cost=5e6, multiplier=1.01),
         dict(type=GameMultiplierUpgrade, name="oatmeal_raisin_cookies", cost=10e6, multiplier=1.01),
@@ -192,12 +272,48 @@ class CookieClickerGame:
         dict(type=GameMultiplierUpgrade, name="hazelnut_cookies", cost=100e6, multiplier=1.02),
         dict(type=GameMultiplierUpgrade, name="walnut_cookies", cost=100e6, multiplier=1.02),
         dict(type=GameMultiplierUpgrade, name="white_chocolate_cookies", cost=500e6, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="macadamia_nut_cookies", cost=1e9, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="double_chip_cookies", cost=5e9, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="white_chocolate_macadamia_nut_cookies", cost=10e9, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="all_chocolate_cookies", cost=50e9, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="dark_chocolate_coated_cookies", cost=100e9, multiplier=1.04),
+        dict(type=GameMultiplierUpgrade, name="white_chocolate_coated_cookies", cost=100e9, multiplier=1.04),
+        dict(type=GameMultiplierUpgrade, name="eclipse_cookies", cost=500e9, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="zebra_cookies", cost=1e12, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="snickerdoodles", cost=5e12, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="stroopwafeles", cost=10e12, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="macaroon", cost=50e12, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="empire_biscuit", cost=100e12, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="madeleines", cost=500e12, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="palmiers", cost=500e12, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="palets", cost=1e15, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="sables", cost=1e15, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="gingerbread_men", cost=10e15, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="gingerbread_trees", cost=10e15, multiplier=1.02),
+        dict(type=GameMultiplierUpgrade, name="pure_black_chocolate_cookies", cost=50e15, multiplier=1.04),
+        dict(type=GameMultiplierUpgrade, name="pure_white_chocolate_cookies", cost=50e15, multiplier=1.04),
+        dict(type=GameMultiplierUpgrade, name="ladyfingers", cost=100e15, multiplier=1.03),
+        dict(type=GameMultiplierUpgrade, name="tuiles", cost=500e15, multiplier=1.03),
+        dict(type=GameMultiplierUpgrade, name="chocolate_stuffed_cookies", cost=1e18, multiplier=1.03),
+        dict(type=GameMultiplierUpgrade, name="checker_cookies", cost=5e18, multiplier=1.03),
+        dict(type=GameMultiplierUpgrade, name="butter_cookies", cost=10e18, multiplier=1.03),
+        dict(type=GameMultiplierUpgrade, name="cream_cookies", cost=50e18, multiplier=1.03),
+        dict(type=GameMultiplierUpgrade, name="gingersnaps", cost=100e18, multiplier=1.04),
+    
+        ## Clicker
+        dict(type=ClickerAddCPSUpgrade, name="plastic_mouse", cost=50e3, add_amount=0.01),
+        dict(type=ClickerAddCPSUpgrade, name="iron_mouse", cost=5e6, add_amount=0.01),
+        dict(type=ClickerAddCPSUpgrade, name="titanium_mouse", cost=500e6, add_amount=0.01),
+        dict(type=ClickerAddCPSUpgrade, name="adamantium_mouse", cost=50e9, add_amount=0.01),
+        dict(type=ClickerAddCPSUpgrade, name="unobtanium_mouse", cost=5e12, add_amount=0.01),
+        dict(type=ClickerAddCPSUpgrade, name="eludium_mouse", cost=500e12, add_amount=0.01),
+        
     
         # Cursor
         ## Multipliers
-        dict(type=ProducerMultiplierUpgrade, name="reinforced_index_finger", cost=100, producer="cursor", multiplier=2),
-        dict(type=ProducerMultiplierUpgrade, name="carpal_tunnel_prevention_cream", cost=500, producer="cursor", multiplier=2),
-        dict(type=ProducerMultiplierUpgrade, name="ambidextrous", cost=10000, producer="cursor", multiplier=2),
+        dict(type=ClickerCursorMultiplierUpgrade, name="reinforced_index_finger", cost=100, cursor_producer="cursor", multiplier=2),
+        dict(type=ClickerCursorMultiplierUpgrade, name="carpal_tunnel_prevention_cream", cost=500, cursor_producer="cursor", multiplier=2),
+        dict(type=ClickerCursorMultiplierUpgrade, name="ambidextrous", cost=10000, cursor_producer="cursor", multiplier=2),
         
         ## Additive Per Other
         dict(type=CursorAddPerOtherUpgrade, name="thousand_fingers", cost=100e3, add_amount=0.1),
@@ -205,6 +321,8 @@ class CookieClickerGame:
         dict(type=CursorAddPerOtherUpgrade, name="billion_fingers", cost=100e6, add_amount=5),
         dict(type=CursorAddPerOtherUpgrade, name="trillion_fingers", cost=1e9, add_amount=50),
         dict(type=CursorAddPerOtherUpgrade, name="quadrillion_fingers", cost=10e9, add_amount=500),
+        dict(type=CursorAddPerOtherUpgrade, name="quintillion_fingers", cost=10e12, add_amount=5000),
+        dict(type=CursorAddPerOtherUpgrade, name="sextillion_fingers", cost=10e15, add_amount=50000),
         
         
         # Grandma
@@ -214,50 +332,102 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="lubricated_dentures", cost=50000, producer="grandma", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="prune_juice", cost=5e6, producer="grandma", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="double_thick_glasses", cost=500e6, producer="grandma", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="aging_agents", cost=50e9, producer="grandma", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="xtreme_walkers", cost=50e12, producer="grandma", multiplier=2),
         
         ## Multipliers + % per n grandmas
         dict(type=ProducerMultiPerNGrandmasUpgrade, name="farmer_grandmas", cost=55e3, producer="farm", grandma_multi=2, prod_add_multi=0.01, per_n=1),
         dict(type=ProducerMultiPerNGrandmasUpgrade, name="miner_grandmas", cost=600e3, producer="mine", grandma_multi=2, prod_add_multi=0.01, per_n=2),
         dict(type=ProducerMultiPerNGrandmasUpgrade, name="worker_grandmas", cost=6.5e6, producer="factory", grandma_multi=2, prod_add_multi=0.01, per_n=3),
         dict(type=ProducerMultiPerNGrandmasUpgrade, name="banker_grandmas", cost=70e6, producer="bank", grandma_multi=2, prod_add_multi=0.01, per_n=4),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="priestess_grandmas", cost=1e9, producer="temple", grandma_multi=2, prod_add_multi=0.01, per_n=5),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="witch_grandmas", cost=16.5e9, producer="wizard_tower", grandma_multi=2, prod_add_multi=0.01, per_n=6),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="cosmic_grandmas", cost=255e9, producer="shipment", grandma_multi=2, prod_add_multi=0.01, per_n=7),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="transmuted_grandmas", cost=3.75e12, producer="alchemy_lab", grandma_multi=2, prod_add_multi=0.01, per_n=8),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="altered_grandmas", cost=50e12, producer="portal", grandma_multi=2, prod_add_multi=0.01, per_n=9),
+        dict(type=ProducerMultiPerNGrandmasUpgrade, name="grandmas_grandmas", cost=700e15, producer="time_machine", grandma_multi=2, prod_add_multi=0.01, per_n=10),
         
         # Farm
         dict(type=ProducerMultiplierUpgrade, name="cheap_hoes", cost=11e3, producer="farm", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="fertilizer", cost=55e3, producer="farm", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="cookie_trees", cost=550e3, producer="farm", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="genetically_modified_cookies", cost=55e6, producer="farm", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="gingerbread_scarecrows", cost=5.5e9, producer="farm", multiplier=2),
         
         # Mine
         dict(type=ProducerMultiplierUpgrade, name="sugar_gas", cost=120e3, producer="mine", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="megadrill", cost=600e3, producer="mine", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="ultradrill", cost=6e6, producer="mine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="ultimadrill", cost=600e6, producer="mine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="h_bomb_mining", cost=60e9, producer="mine", multiplier=2),
         
         # Factory
         dict(type=ProducerMultiplierUpgrade, name="sturdier_conveyor_belts", cost=1.3e6, producer="factory", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="child_labor", cost=6.5e6, producer="factory", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="sweatshop", cost=65e6, producer="factory", multiplier=2),
         dict(type=ProducerMultiplierUpgrade, name="radium_reactors", cost=6.5e9, producer="factory", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="recombobulators", cost=650e9, producer="factory", multiplier=2),
         
         # Bank
+        dict(type=ProducerMultiplierUpgrade, name="taller_tellers", cost=14e6, producer="bank", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="scissor_resistant_credit_cards", cost=70e6, producer="bank", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="acid_prood_vaults", cost=700e6, producer="bank", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="chocolate_coins", cost=70e9, producer="bank", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="exponential_interest_rates", cost=7e12, producer="bank", multiplier=2),
         
         # Temple
+        dict(type=ProducerMultiplierUpgrade, name="golden_idols", cost=200e6, producer="temple", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="sacrifices", cost=1e9, producer="temple", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="delicious_blessing", cost=10e9, producer="temple", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="sun_festival", cost=1e12, producer="temple", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="enlarged_pantheon", cost=100e12, producer="temple", multiplier=2),
         
         # Wizard Tower
+        dict(type=ProducerMultiplierUpgrade, name="pointier_hats", cost=3.3e9, producer="wizard_tower", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="beardier_beards", cost=16.5e9, producer="wizard_tower", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="ancient_grimoires", cost=165e9, producer="wizard_tower", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="kitchen_curses", cost=16.5e12, producer="wizard_tower", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="school_of_sorcery", cost=1.65e15, producer="wizard_tower", multiplier=2),
         
         # Shipment
+        dict(type=ProducerMultiplierUpgrade, name="vanilla_nebulae", cost=51e9, producer="shipment", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="wormholes", cost=255e9, producer="shipment", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="frequent_flyer", cost=2.55e12, producer="shipment", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="warp_drive", cost=255e12, producer="shipment", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="chocolate_monoliths", cost=25.5e15, producer="shipment", multiplier=2),
         
         # Alchemy Lab
+        dict(type=ProducerMultiplierUpgrade, name="antimony", cost=750e9, producer="alchemy_lab", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="essence_of_dough", cost=3.75e12, producer="alchemy_lab", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="true_chocolate", cost=37.5e12, producer="alchemy_lab", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="ambrosia", cost=3.75e15, producer="alchemy_lab", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="aqua_crustulae", cost=375e15, producer="alchemy_lab", multiplier=2),
         
         # Portal
+        dict(type=ProducerMultiplierUpgrade, name="ancient_tablet", cost=10e12, producer="portal", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="insane_oatling_workers", cost=50e12, producer="portal", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="soul_bond", cost=500e12, producer="portal", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="sanity_dance", cost=50e15, producer="portal", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="brane_transplant", cost=5e18, producer="portal", multiplier=2),
         
         # Time Machine
+        dict(type=ProducerMultiplierUpgrade, name="flux_capacitors", cost=140e12, producer="time_machine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="time_paradox_resolver", cost=700e12, producer="time_machine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="quantum_conundrum", cost=7e15, producer="time_machine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="causality_enforcer", cost=700e15, producer="time_machine", multiplier=2),
+        dict(type=ProducerMultiplierUpgrade, name="yestermorrow_comparators", cost=70e18, producer="time_machine", multiplier=2),
         
         # Antimatter Condenser
+        dict(type=ProducerMultiplierUpgrade, name="sugar_bosons", cost=1.7e15, producer="antimatter_condenser", multiplier=2),
         
         # Prism
+        dict(type=ProducerMultiplierUpgrade, name="gem_polish", cost=21e15, producer="prism", multiplier=2),
         
         # Chancemaker
+        dict(type=ProducerMultiplierUpgrade, name="your_lucky_cookie", cost=260e15, producer="chancemaker", multiplier=2),
         
         # Fractal Engine
+        dict(type=ProducerMultiplierUpgrade, name="metabakeries", cost=3.1e18, producer="fractal_engine", multiplier=2),
     ]
 
     def __init__(self):
@@ -267,6 +437,8 @@ class CookieClickerGame:
         self.cpt = 0
         self.multiplier_funcs = []
         self.clicker_add_funcs = []
+        self.clicker_multiplier_funcs = []
+        
         
         self.producers = self._setup_producers()
         self.upgrades = self._setup_upgrades()
@@ -280,11 +452,14 @@ class CookieClickerGame:
             if "producer" in spec:
                 spec["producer"] = self.get_producer(spec["producer"])
                 
+            if "cursor_producer" in spec:
+                spec["cursor_producer"] = self.get_producer(spec["cursor_producer"])
+                
             
             if spec["type"] in (CursorAddPerOtherUpgrade,):
                 spec["producers"] = self.producers
                 
-            if spec["type"] in (GameMultiplierUpgrade, CursorAddPerOtherUpgrade):
+            if spec["type"] in (GameMultiplierUpgrade, CursorAddPerOtherUpgrade, ClickerAddCPSUpgrade, ClickerCursorMultiplierUpgrade):
                 spec["game"] = self
                 
             if spec["type"] in (ProducerMultiPerNGrandmasUpgrade,):
@@ -367,23 +542,24 @@ class CookieClickerGame:
             return False
             
     def get_cpc(self):
-        return 1 + sum(f() for f in self.clicker_add_funcs)
+        return (1 + sum(f() for f in self.clicker_add_funcs)) * prod(f() for f in self.clicker_multiplier_funcs)
     
     def click(self):
         self.cookies += self.get_cpc()
         
     def __str__(self):
         return "\n".join([
-            f"Turn: {self.turn}, Cookies: {self.cookies:.1f}, Producing: {self.cpt:.1f}, Total: {self.total_cookies:.1f}",
+            f"Turn: {self.turn}, Cookies: {format_large_num(self.cookies)}, Producing: {format_large_num(self.cpt)}, Total: {format_large_num(self.total_cookies)}",
+            f"Cookies/click: {format_large_num(self.get_cpc())}, ClickerMultis: {str([f() for f in self.clicker_multiplier_funcs])}",
             "Producers:",
             f"{'Name':<25s}{'Owned':<10s}{'Cost':<15s}{'Producing':<20s}{'Multis':<20s}",
             "\n".join(map(str, self.producers)),
             "Upgrades:",
-            f"{'Name':<35s}{'Type':<35s}{'Multi':<10s}",
+            f"{'Name':<40s}{'Type':<35s}{'Multi':<10s}",
             "\n".join(str(u) for u in self.upgrades if u.owned),
         ])
         
-    def get_available_actions(self):   
+    def get_available_actions(self):
         def _pass():
             pass
     
@@ -445,11 +621,12 @@ class Producer:
         self.n_owned = 0
         self.current_price = base_price
         self.multiplier_funcs = []
-        self.add_pre = 0
-        self.add_post = 0
+        self.add_pre_funcs = []
+        self.add_post_funcs = []
+
     
     def get_production(self):
-        return (self.cpt + self.add_pre) * self.n_owned * self.get_multi() + self.add_post
+        return (self.cpt + self.get_add_pre()) * self.n_owned * self.get_multi() + self.get_add_post()
     
     def get_multi(self):
         return prod(self.get_multis())
@@ -457,12 +634,27 @@ class Producer:
     def get_multis(self):
         return [f() for f in self.multiplier_funcs]
         
+    def get_add_pre(self):
+        return sum(self.get_add_pres())
+    
+    def get_add_pres(self):
+        return [f() for f in self.add_pre_funcs]
+        
+    def get_add_post(self):
+        return sum(self.get_add_posts())
+    
+    def get_add_posts(self):
+        return [f() for f in self.add_post_funcs]
+        
     def add_multi_func(self, func):
         self.multiplier_funcs.append(func)
+        
+    def add_add_pre_func(self, func):
+        self.add_pre_funcs.append(func)
     
-    def change_stats(self, add_pre=0, add_post=0):
-        self.add_pre += add_pre
-        self.add_post += add_post
+    def add_add_post_func(self, func):
+        self.add_post_funcs.append(func)
+       
     
     def get_price(self, n):
         return int(self.base_price * self.price_scaling ** n)
@@ -476,10 +668,15 @@ class Producer:
         self.current_price = self.get_price(self.n_owned)
  
     def __str__(self):
-        return f"{self.name:<25s}{int(self.n_owned):<10d}{format_large_num(self.current_price):<15s}{self.get_production():<20.1f}" + f"{str(self.get_multis()):<10s}"
+        parts = [
+            f"{self.name:<25s}",
+            f"{int(self.n_owned):<10d}",
+            f"{format_large_num(self.current_price):<15s}",
+            f"{format_large_num(self.get_production()):<20s}",
+            "{:<10s}".format(" ".join(
+                format_large_num(m) for m in self.get_multis()
+            )),
+        ]
         
+        return "".join(parts)
     
-        
-        
-        
-        
