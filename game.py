@@ -2,6 +2,7 @@ import random
 from abc import abstractmethod, ABCMeta
 import operator as op
 from functools import reduce
+import copy
 
 def prod(values):
     return reduce(op.mul, values, 1)
@@ -242,7 +243,7 @@ class ProducerMultiPerNGrandmasUpgrade(Upgrade):
 class CookieClickerGame:
     producer_spec = [
         # name, production, cost, price_scaling
-        ("cursor",              0.1,    15,     1.15), # todo: scaling
+        ("cursor",              0.1,    15,     1.15),
         ("grandma",             1,      100,    1.15),
         ("farm",                8,      1100,   1.15),
         ("mine",                47,     12e3,   1.15),
@@ -487,7 +488,9 @@ class CookieClickerGame:
         dict(type=ProducerMultiplierUpgrade, name="chocolate_ouroboros", cost=155e27, producer="fractal_engine", multiplier=2),
     ]
 
-    def __init__(self):
+    def __init__(self, verbose=True):
+        self.verbose=verbose
+    
         self.total_cookies = 0
         self.cookies = 0
         self.turn = 0
@@ -506,6 +509,8 @@ class CookieClickerGame:
     def _setup_upgrades(self):
         upgrades = []
         for spec in self.upgrade_spec:
+            spec = copy.copy(spec)
+        
             if "producer" in spec:
                 spec["producer"] = self.get_producer(spec["producer"])
                 
@@ -554,32 +559,32 @@ class CookieClickerGame:
         cost = upgrade.cost
         
         if upgrade.owned:
-            print(f"Upgrade: {upgrade.name} already owned.")
+            if self.verbose: print(f"Upgrade: {upgrade.name} already owned.")
             return False
         
         if cost <= self.cookies:
-            print(f"Bought: {upgrade.name} for {upgrade.cost}. Cookies: {self.cookies} -> ", end="")
+            if self.verbose: print(f"Bought: {upgrade.name} for {upgrade.cost}. Cookies: {self.cookies} -> ", end="")
             self.cookies -= cost
             upgrade.buy()
-            print(f"{self.cookies:.1f}")
+            if self.verbose: print(f"{self.cookies:.1f}")
             
             return True
         else:
-            print(f"Cant afford upgrade: {upgrade.name} for {upgrade.cost:.0f} with {self.cookies:.1f}")
+            if self.verbose: print(f"Cant afford upgrade: {upgrade.name} for {upgrade.cost:.0f} with {self.cookies:.1f}")
             return False
         
     def buy_producer(self, idx):
         prod = self.producers[idx]
         cost = prod.current_price
         if cost <= self.cookies:
-            print(f"Bought: {prod.name} for {prod.current_price}. Cookies: {self.cookies} -> ", end="")
+            if self.verbose: print(f"Bought: {prod.name} for {prod.current_price}. Cookies: {self.cookies} -> ", end="")
             self.cookies -= cost
             prod.buy()
-            print(f"{self.cookies:.1f}")
+            if self.verbose: print(f"{self.cookies:.1f}")
             
             return True
         else:
-            print(f"Cant afford producer: {prod.name} for {prod.current_price:.0f} with {self.cookies:.1f}")
+            if self.verbose: print(f"Cant afford producer: {prod.name} for {prod.current_price:.0f} with {self.cookies:.1f}")
             return False
             
     def sell_producer(self, idx):
@@ -590,12 +595,12 @@ class CookieClickerGame:
             _cookies = self.cookies
             prod.sell()
             self.cookies += prod.current_price
-            print("Sold:", prod.name, "for", prod.current_price, ". Cookies:", _cookies, "->", self.cookies)
+            if self.verbose: print("Sold:", prod.name, "for", prod.current_price, ". Cookies:", _cookies, "->", self.cookies)
             
             return True
         
         else:
-            print(f"Cant sell: {prod.name}. Owned: {prod.n_owned}")
+            if self.verbose: print(f"Cant sell: {prod.name}. Owned: {prod.n_owned}")
             return False
             
     def get_cpc(self):
@@ -606,15 +611,31 @@ class CookieClickerGame:
         
     def __str__(self):
         return "\n".join([
+            self.str_basic(),
+            self.str_producers(),
+            self.str_upgrades(),
+        ])
+    
+    def str_basic(self):
+        return "\n".join([
             f"Turn: {self.turn}, Cookies: {format_large_num(self.cookies)}, Producing: {format_large_num(self.cpt)}, Total: {format_large_num(self.total_cookies)}",
             f"Cookies/click: {format_large_num(self.get_cpc())}, ClickerMultis: {str([f() for f in self.clicker_multiplier_funcs])}",
+        ])
+    
+    def str_producers(self):
+        return "\n".join([
             "Producers:",
             f"{'Name':<25s}{'Owned':<10s}{'Cost':<15s}{'Producing':<20s}{'Multis':<20s}",
             "\n".join(map(str, self.producers)),
+        ])
+        
+    def str_upgrades(self):
+        return "\n".join([
             "Upgrades:",
             f"{'Name':<40s}{'Type':<35s}{'Multi':<10s}",
             "\n".join(str(u) for u in self.upgrades if u.owned),
         ])
+        
         
     def get_available_actions(self):
         def _pass():
@@ -622,17 +643,41 @@ class CookieClickerGame:
     
         actions = []
         
-        actions.append([_pass])
+        # actions.append([_pass])
         
         actions.append([self.click])
         
-        avail_buy_prod = [[i] for i, p in enumerate(self.producers) if p.current_price <= self.cookies]
+        avail_buy_prod = [(i,) for i, p in enumerate(self.producers) if p.current_price <= self.cookies]
         actions.append([self.buy_producer, avail_buy_prod])
         
-        avail_sell_prod = [[i] for i, p in enumerate(self.producers) if p.n_owned > 0]
+        avail_sell_prod = [(i,) for i, p in enumerate(self.producers) if p.n_owned > 0]
         actions.append([self.sell_producer, avail_sell_prod])
         
-        avail_buy_upgr = [[i] for i, u in enumerate(self.upgrades) if not u.owned and u.cost <= self.cookies]
+        avail_buy_upgr = [(i,) for i, u in enumerate(self.upgrades) if not u.owned and u.cost <= self.cookies]
+        actions.append([self.buy_upgrade, avail_buy_upgr])
+            
+        return actions
+       
+    def get_all_actions(self):
+        def _pass():
+            pass
+    
+        actions = []
+        
+        # actions.append([_pass])
+        
+        actions.append([self.click])
+        
+        avail_buy_prod = [(i,) for i, p in enumerate(self.producers)]
+        # avail_buy_prod = list(range(len(self.producers)))
+        actions.append([self.buy_producer, avail_buy_prod])
+        
+        avail_sell_prod = [(i,) for i, p in enumerate(self.producers)]
+        # avail_sell_prod = list(range(len(self.producers)))
+        actions.append([self.sell_producer, avail_sell_prod])
+        
+        avail_buy_upgr = [(i,) for i, u in enumerate(self.upgrades)]
+        # avail_buy_upgr = list(range(len(self.upgrades)))
         actions.append([self.buy_upgrade, avail_buy_upgr])
             
         return actions
